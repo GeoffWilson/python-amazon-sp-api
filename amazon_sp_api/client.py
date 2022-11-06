@@ -3,19 +3,27 @@ import hashlib
 import hmac
 import json
 
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Type
 
 
 def _hash_string(string_to_hash: str) -> str:
     return hashlib.sha256(string_to_hash.encode('utf-8')).hexdigest()
 
 
-class SpApiRequest(object):
-    def __init__(self, method, endpoint):
+class SpApiResponse(object):
+    def __init__(self, data: Dict[str, any]):
+        if data.get('payload', None) is None:
+            raise ValueError('Missing payload key')
+
+
+class _SpApiRequest(object):
+    def __init__(self, client, method, endpoint, response_type):
+        self.client = client
         self.method: str = method
         self.endpoint: str = endpoint
         self.query_string: Dict[str, str] = {}
         self.payload: Dict[str, str] = {}
+        self._response_type: Type[SpApiResponse] = response_type
 
     def get_query_string(self) -> str:
         import urllib.parse
@@ -31,6 +39,12 @@ class SpApiRequest(object):
             return ''
         return json.dumps(self.payload)
 
+    def make_response(self, data) -> SpApiResponse:
+        return self._response_type(data=data)
+
+    def perform(self):
+        raise NotImplementedError('Cant do this')
+
 
 class AmazonWebServicesCredentials(object):
     def __init__(self, access_key_id: str, secret_key_id: str, role_arn: str):
@@ -43,6 +57,13 @@ class LoginWithAmazonCredentials(object):
     def __init__(self, client_id: str, client_secret: str):
         self.client_id = client_id
         self.client_secret = client_secret
+
+
+class ListOrdersResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        payload = data.get('payload', {})
+        self.orders: List[Order] = [Order(data=x) for x in payload.get('Orders', [])]
 
 
 class Client(object):
@@ -86,7 +107,7 @@ class Client(object):
         header_list.sort()
         return ';'.join(header_list)
 
-    def _get_canonical(self, request: SpApiRequest):
+    def _get_canonical(self, request: _SpApiRequest):
         return '{http_method}\n{uri}\n{query_string}\n{headers}\n{signed_headers}\n{payload}'.format(
             http_method=request.method.upper(),
             uri=request.endpoint,
@@ -126,7 +147,7 @@ class Client(object):
             digestmod=hashlib.sha256
         ).digest()
 
-    def make_request(self, request: SpApiRequest) -> Optional[any]:
+    def make_request(self, request: _SpApiRequest) -> SpApiResponse:
         if self._access_token is None or self._access_token_expired():
             self._get_access_token()
 
@@ -139,8 +160,6 @@ class Client(object):
         self._assumed_access_key_id = credentials.get('AccessKeyId')
         self._assumed_secret_key_id = credentials.get('SecretAccessKey')
         self._amazon_session_token = credentials.get('SessionToken')
-
-        print(credentials)
 
         self._headers = {
             'x-amz-access-token': self._access_token,
@@ -177,6 +196,10 @@ class Client(object):
             headers=self._headers,
             params=request.query_string
         )
+        if not outcome.ok:
+            raise ValueError('Amazon SP-API call failed')
+
+        return request.make_response(outcome.json())
 
     def _assume_role(self) -> Dict[str, str]:
         import boto3
@@ -192,7 +215,7 @@ class Client(object):
         )
         return assumed_role_object
 
-    def _sign_request(self, request: SpApiRequest) -> str:
+    def _sign_request(self, request: _SpApiRequest) -> str:
         pass
 
     def _get_access_token(self):
@@ -217,11 +240,21 @@ class Client(object):
         self._access_token_expires = expires
 
 
-class ListOrdersRequest(SpApiRequest):
-    def __init__(self, marketplaces: List[str]):
-        super().__init__(method='GET', endpoint='/orders/v0/orders')
+class ListOrdersRequest(_SpApiRequest):
+    def __init__(self, client, marketplaces: List[str]):
+        super().__init__(client=client, method='GET', endpoint='/orders/v0/orders', response_type=ListOrdersResponse)
         self.query_string: Dict[str, str] = {
             'MarketplaceIds': ','.join(marketplaces),
             'CreatedAfter': '2022-11-04T00:00:00Z',
             'OrderStatuses': 'Unshipped'
         }
+
+    def perform(self) -> ListOrdersResponse:
+        return self.client.make_request(self)
+
+
+class Order(object):
+    def __init__(self, data: Dict[str, any]):
+        self.order_id: str = data.get('AmazonOrderId', None)
+        self.status: str = data.get('OrderStatus', None)
+        self.purchase_date: datetime.datetime = data.get('PurchaseDate', None)
