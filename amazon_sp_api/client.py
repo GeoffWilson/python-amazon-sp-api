@@ -180,8 +180,7 @@ class Client(object):
             'x-amz-date': request_date_time,
             'x-amz-security-token': self._amazon_session_token,
             'user-agent': 'NetXL/2.0',
-            'host': 'sellingpartnerapi-eu.amazon.com',
-            'content-type': 'application/json'
+            'host': 'sellingpartnerapi-eu.amazon.com'
         }
 
         scope = '{date}/{region}/execute-api/aws4_request'.format(
@@ -197,8 +196,6 @@ class Client(object):
             hashed_canonical=hashed_canonical
         )
 
-        print(self._get_canonical(request))
-
         signature = hmac.new(
             key=self._create_signing_key(request_date, 'execute-api'),
             msg=string_to_sign.encode('utf-8'),
@@ -209,7 +206,7 @@ class Client(object):
 
         import requests
         outcome = request.do_http_request(
-            url=f'{self._base_url}/{request.endpoint}',
+            url=f'{self._base_url}{request.endpoint}',
             headers=self._headers,
             query_string=request.query_string
         )
@@ -339,8 +336,8 @@ class CreateSupplySourcesRequest(_SpApiRequest):
             client=client,
             method='POST',
             endpoint='/supplySources/2020-07-01/supplySources',
-            response_type=CreateSupplySourcesResponse,
-            endpoint_for_singing='/2020-07-01/supplySources'
+            response_type=CreateSupplySourcesResponse
+            # endpoint_for_singing='/2020-07-01/supplySources'
         )
         self.query_string: Dict[str, str] = {}
 
