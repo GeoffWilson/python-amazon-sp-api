@@ -17,10 +17,11 @@ class SpApiResponse(object):
 
 
 class _SpApiRequest(object):
-    def __init__(self, client, method, endpoint, response_type):
+    def __init__(self, client, method, endpoint, response_type, endpoint_for_singing=None):
         self.client = client
         self.method: str = method
         self.endpoint: str = endpoint
+        self.endpoint_for_signing: str = endpoint if endpoint_for_singing is None else endpoint_for_singing
         self.query_string: Dict[str, str] = {}
         self.payload: Dict[str, str] = {}
         self._response_type: Type[SpApiResponse] = response_type
@@ -45,6 +46,9 @@ class _SpApiRequest(object):
     def perform(self):
         raise NotImplementedError('Cant do this')
 
+    def do_http_request(self, url, headers, query_string):
+        raise NotImplementedError('Cant do this')
+
 
 class AmazonWebServicesCredentials(object):
     def __init__(self, access_key_id: str, secret_key_id: str, role_arn: str):
@@ -64,6 +68,16 @@ class ListOrdersResponse(SpApiResponse):
         super().__init__(data)
         payload = data.get('payload', {})
         self.orders: List[Order] = [Order(data=x) for x in payload.get('Orders', [])]
+
+
+class ListSupplySourcesResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+
+
+class CreateSupplySourcesResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
 
 
 class Client(object):
@@ -110,11 +124,11 @@ class Client(object):
     def _get_canonical(self, request: _SpApiRequest):
         return '{http_method}\n{uri}\n{query_string}\n{headers}\n{signed_headers}\n{payload}'.format(
             http_method=request.method.upper(),
-            uri=request.endpoint,
+            uri=request.endpoint_for_signing,
             query_string=request.get_query_string(),
             headers=self._get_headers(),
             signed_headers=self._get_signed_header_names(),
-            payload=_hash_string(request.payload_as_string())
+            payload=_hash_string(request.payload_as_string()).lower()
         )
 
     def _access_token_expired(self) -> bool:
@@ -166,7 +180,8 @@ class Client(object):
             'x-amz-date': request_date_time,
             'x-amz-security-token': self._amazon_session_token,
             'user-agent': 'NetXL/2.0',
-            'host': 'sellingpartnerapi-eu.amazon.com'
+            'host': 'sellingpartnerapi-eu.amazon.com',
+            'content-type': 'application/json'
         }
 
         scope = '{date}/{region}/execute-api/aws4_request'.format(
@@ -182,6 +197,8 @@ class Client(object):
             hashed_canonical=hashed_canonical
         )
 
+        print(self._get_canonical(request))
+
         signature = hmac.new(
             key=self._create_signing_key(request_date, 'execute-api'),
             msg=string_to_sign.encode('utf-8'),
@@ -191,11 +208,13 @@ class Client(object):
         self._headers['Authorization'] = f'{self.AWS_ALGORITH} Credential={self._assumed_access_key_id}/{scope},SignedHeaders={self._get_signed_header_names()},Signature={signature}'
 
         import requests
-        outcome = requests.get(
-            url=f'{self._base_url}{request.endpoint}',
+        outcome = request.do_http_request(
+            url=f'{self._base_url}/{request.endpoint}',
             headers=self._headers,
-            params=request.query_string
+            query_string=request.query_string
         )
+
+        print(outcome.content.decode('utf-8'))
         if not outcome.ok:
             raise ValueError('Amazon SP-API call failed')
 
@@ -252,9 +271,88 @@ class ListOrdersRequest(_SpApiRequest):
     def perform(self) -> ListOrdersResponse:
         return self.client.make_request(self)
 
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
 
 class Order(object):
     def __init__(self, data: Dict[str, any]):
         self.order_id: str = data.get('AmazonOrderId', None)
         self.status: str = data.get('OrderStatus', None)
         self.purchase_date: datetime.datetime = data.get('PurchaseDate', None)
+
+
+class ListSupplySourcesRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint='/supplySources/2020-07-01/supplySources',
+            response_type=ListSupplySourcesResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> ListSupplySourcesResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class SupplySource(object):
+    def __init__(self, data: Dict[str, any]):
+        self.code = data.get('supplySourceCode', None)
+        self.alias = data.get('alias', None)
+        self.address = SupplySourceAddress(data=data.get('address', {}))
+
+
+class SupplySourceAddress(object):
+    def __init__(self, data: Dict[str, any]):
+        self.name = data.get('name', None)
+        self.addressLineOne = data.get('addressLine1', None)
+        self.addressLineTwo = data.get('addressLine2', None)
+        self.addressLineThree = data.get('addressLine3', None)
+        self.city = data.get('city', None)
+        self.county = data.get('count', None)
+        self.district = data.get('district', None)
+        self.state = data.get('stateOrRegion', None)
+        self.postalCode = data.get('postalCode', None)
+        self.countryCode = data.get('countryCode', None)
+        self.phone = data.get('phone', None)
+
+
+class CreateSupplySourcesRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint='/supplySources/2020-07-01/supplySources',
+            response_type=CreateSupplySourcesResponse,
+            endpoint_for_singing='/2020-07-01/supplySources'
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateSupplySourcesResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            headers=headers,
+            params=query_string,
+            data=self.payload_as_string()
+        )
+        return outcome
