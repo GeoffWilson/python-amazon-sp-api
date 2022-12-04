@@ -17,11 +17,10 @@ class SpApiResponse(object):
 
 
 class _SpApiRequest(object):
-    def __init__(self, client, method, endpoint, response_type, endpoint_for_singing=None):
+    def __init__(self, client, method, endpoint, response_type):
         self.client = client
         self.method: str = method
         self.endpoint: str = endpoint
-        self.endpoint_for_signing: str = endpoint if endpoint_for_singing is None else endpoint_for_singing
         self.query_string: Dict[str, str] = {}
         self.payload: Dict[str, str] = {}
         self._response_type: Type[SpApiResponse] = response_type
@@ -80,6 +79,21 @@ class CreateSupplySourcesResponse(SpApiResponse):
         super().__init__(data)
 
 
+class GetSubscriptionsResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+
+
+class GetDestinationsResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+
+
+class CreateDestinationResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+
+
 class Client(object):
     AWS_REGION = 'eu-west-1'
     AWS_ALGORITH = 'AWS4-HMAC-SHA256'
@@ -88,11 +102,15 @@ class Client(object):
             self,
             refresh_token: str,
             aws_credentials: AmazonWebServicesCredentials,
-            lwa_credentials: LoginWithAmazonCredentials
+            lwa_credentials: LoginWithAmazonCredentials,
+            grant_type: str = 'refresh_token',
+            scope: Optional[str] = None
     ):
         self._refresh_token = refresh_token
         self._aws_credentials = aws_credentials
         self._lwa_credentials = lwa_credentials
+        self._grant_type = grant_type
+        self._scope = scope
 
         self._base_url: str = 'https://sellingpartnerapi-eu.amazon.com'
 
@@ -124,7 +142,7 @@ class Client(object):
     def _get_canonical(self, request: _SpApiRequest):
         return '{http_method}\n{uri}\n{query_string}\n{headers}\n{signed_headers}\n{payload}'.format(
             http_method=request.method.upper(),
-            uri=request.endpoint_for_signing,
+            uri=request.endpoint,
             query_string=request.get_query_string(),
             headers=self._get_headers(),
             signed_headers=self._get_signed_header_names(),
@@ -204,14 +222,12 @@ class Client(object):
 
         self._headers['Authorization'] = f'{self.AWS_ALGORITH} Credential={self._assumed_access_key_id}/{scope},SignedHeaders={self._get_signed_header_names()},Signature={signature}'
 
-        import requests
         outcome = request.do_http_request(
             url=f'{self._base_url}{request.endpoint}',
             headers=self._headers,
             query_string=request.query_string
         )
 
-        print(outcome.content.decode('utf-8'))
         if not outcome.ok:
             raise ValueError('Amazon SP-API call failed')
 
@@ -236,15 +252,25 @@ class Client(object):
 
     def _get_access_token(self):
         import requests
-        access_token_request = requests.post(
-            url='https://api.amazon.com/auth/o2/token',
-            data={
-                'grant_type': 'refresh_token',
+        if self._grant_type == 'refresh_token':
+            data = {
+                'grant_type': self._grant_type,
                 'refresh_token': self._refresh_token,
                 'client_id': self._lwa_credentials.client_id,
                 'client_secret': self._lwa_credentials.client_secret
             }
+        else:
+            data = {
+                'grant_type': self._grant_type,
+                'client_id': self._lwa_credentials.client_id,
+                'client_secret': self._lwa_credentials.client_secret,
+                'scope': self._scope
+            }
+        access_token_request = requests.post(
+            url='https://api.amazon.com/auth/o2/token',
+            data=data
         )
+
         if access_token_request.status_code != 200:
             raise ValueError('Could not obtain access token from Amazon')
 
@@ -308,6 +334,29 @@ class ListSupplySourcesRequest(_SpApiRequest):
         return outcome
 
 
+class GetSupplySourceRequest(_SpApiRequest):
+    def __init__(self, client, supply_source_id):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/supplySources/2020-07-01/supplySources/{supply_source_id}',
+            response_type=ListSupplySourcesResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> ListSupplySourcesResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
 class SupplySource(object):
     def __init__(self, data: Dict[str, any]):
         self.code = data.get('supplySourceCode', None)
@@ -337,7 +386,6 @@ class CreateSupplySourcesRequest(_SpApiRequest):
             method='POST',
             endpoint='/supplySources/2020-07-01/supplySources',
             response_type=CreateSupplySourcesResponse
-            # endpoint_for_singing='/2020-07-01/supplySources'
         )
         self.query_string: Dict[str, str] = {}
 
@@ -351,5 +399,173 @@ class CreateSupplySourcesRequest(_SpApiRequest):
             headers=headers,
             params=query_string,
             data=self.payload_as_string()
+        )
+        return outcome
+
+
+class UpdateSupplySourceRequest(_SpApiRequest):
+    def __init__(self, client, supply_source_id):
+        super().__init__(
+            client=client,
+            method='PUT',
+            endpoint=f'/supplySources/2020-07-01/supplySources/{supply_source_id}',
+            response_type=CreateSupplySourcesResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateSupplySourcesResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.put(
+            url=url,
+            headers=headers,
+            params=query_string,
+            data=self.payload_as_string()
+        )
+        return outcome
+
+
+class UpdateSupplySourceStatusRequest(_SpApiRequest):
+    def __init__(self, client, supply_source_id):
+        super().__init__(
+            client=client,
+            method='PUT',
+            endpoint=f'/supplySources/2020-07-01/supplySources/{supply_source_id}/status',
+            response_type=CreateSupplySourcesResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateSupplySourcesResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.put(
+            url=url,
+            headers=headers,
+            params=query_string,
+            data=self.payload_as_string()
+        )
+        return outcome
+
+
+class GetSubscriptionsRequest(_SpApiRequest):
+    def __init__(self, client, subscription_type):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/notifications/v1/subscriptions/{subscription_type}',
+            response_type=GetSubscriptionsResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetSubscriptionsResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class GetDestinationsRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint='/notifications/v1/destinations',
+            response_type=GetDestinationsResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetDestinationsResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class CreateDestinationRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint='/notifications/v1/destinations',
+            response_type=CreateDestinationResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateDestinationResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class CreateSubscriptionRequest(_SpApiRequest):
+    def __init__(self, client, subscription_type):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint=f'/notifications/v1/subscriptions/{subscription_type}',
+            response_type=CreateDestinationResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateDestinationResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class UpdateListingClickAndCollectInventory(_SpApiRequest):
+    def __init__(self, client, sku):
+        super().__init__(
+            client=client,
+            method='PATCH',
+            endpoint=f'/listings/2021-08-01/items/A1T68U0AS07YKL/{sku}',
+            response_type=CreateDestinationResponse
+        )
+        self.query_string: Dict[str, str] = {
+            'marketplaceIds': 'A1F83G8C2ARO7P'
+        }
+
+    def perform(self) -> CreateDestinationResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.patch(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
         )
         return outcome
