@@ -3,17 +3,11 @@ import hashlib
 import hmac
 import json
 
-from typing import Optional, Dict, List, Type
+from amazon_sp_api.responses import *
 
 
 def _hash_string(string_to_hash: str) -> str:
     return hashlib.sha256(string_to_hash.encode('utf-8')).hexdigest()
-
-
-class SpApiResponse(object):
-    def __init__(self, data: Dict[str, any]):
-        if data.get('payload', None) is None:
-            raise ValueError('Missing payload key')
 
 
 class _SpApiRequest(object):
@@ -60,38 +54,6 @@ class LoginWithAmazonCredentials(object):
     def __init__(self, client_id: str, client_secret: str):
         self.client_id = client_id
         self.client_secret = client_secret
-
-
-class ListOrdersResponse(SpApiResponse):
-    def __init__(self, data: Dict[str, any]):
-        super().__init__(data)
-        payload = data.get('payload', {})
-        self.orders: List[Order] = [Order(data=x) for x in payload.get('Orders', [])]
-
-
-class ListSupplySourcesResponse(SpApiResponse):
-    def __init__(self, data: Dict[str, any]):
-        super().__init__(data)
-
-
-class CreateSupplySourcesResponse(SpApiResponse):
-    def __init__(self, data: Dict[str, any]):
-        super().__init__(data)
-
-
-class GetSubscriptionsResponse(SpApiResponse):
-    def __init__(self, data: Dict[str, any]):
-        super().__init__(data)
-
-
-class GetDestinationsResponse(SpApiResponse):
-    def __init__(self, data: Dict[str, any]):
-        super().__init__(data)
-
-
-class CreateDestinationResponse(SpApiResponse):
-    def __init__(self, data: Dict[str, any]):
-        super().__init__(data)
 
 
 class Client(object):
@@ -304,11 +266,100 @@ class ListOrdersRequest(_SpApiRequest):
         return outcome
 
 
-class Order(object):
-    def __init__(self, data: Dict[str, any]):
-        self.order_id: str = data.get('AmazonOrderId', None)
-        self.status: str = data.get('OrderStatus', None)
-        self.purchase_date: datetime.datetime = data.get('PurchaseDate', None)
+class GetOrderRequest(_SpApiRequest):
+    def __init__(self, client, order_id):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/orders/v0/orders/{order_id}',
+            response_type=GetOrderResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetOrderResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        print(outcome.content)
+        return outcome
+
+
+class GetOrderBuyerInfoRequest(_SpApiRequest):
+    def __init__(self, client, order_id):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/orders/v0/orders/{order_id}/buyerInfo',
+            response_type=GetOrderBuyerInfoResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetOrderBuyerInfoResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        print(outcome.content)
+        return outcome
+
+
+class GetOrderItemsRequest(_SpApiRequest):
+    def __init__(self, client, order_id):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/orders/v0/orders/{order_id}/orderItems',
+            response_type=GetOrderItemsResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetOrderItemsResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        print(outcome.content)
+        return outcome
+
+
+class GetOrderAddressRequest(_SpApiRequest):
+    def __init__(self, client, order_id):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/orders/v0/orders/{order_id}/address',
+            response_type=GetOrderAddressResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetOrderAddressResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        print(outcome.content)
+        return outcome
 
 
 class ListSupplySourcesRequest(_SpApiRequest):
@@ -355,28 +406,6 @@ class GetSupplySourceRequest(_SpApiRequest):
             params=query_string
         )
         return outcome
-
-
-class SupplySource(object):
-    def __init__(self, data: Dict[str, any]):
-        self.code = data.get('supplySourceCode', None)
-        self.alias = data.get('alias', None)
-        self.address = SupplySourceAddress(data=data.get('address', {}))
-
-
-class SupplySourceAddress(object):
-    def __init__(self, data: Dict[str, any]):
-        self.name = data.get('name', None)
-        self.addressLineOne = data.get('addressLine1', None)
-        self.addressLineTwo = data.get('addressLine2', None)
-        self.addressLineThree = data.get('addressLine3', None)
-        self.city = data.get('city', None)
-        self.county = data.get('count', None)
-        self.district = data.get('district', None)
-        self.state = data.get('stateOrRegion', None)
-        self.postalCode = data.get('postalCode', None)
-        self.countryCode = data.get('countryCode', None)
-        self.phone = data.get('phone', None)
 
 
 class CreateSupplySourcesRequest(_SpApiRequest):
