@@ -245,7 +245,6 @@ class Client(object):
             RoleArn=self._aws_credentials.role_arn,
             RoleSessionName=str(uuid.uuid4())
         )
-        client.close()
         return assumed_role_object
 
     def _sign_request(self, request: _SpApiRequest) -> str:
