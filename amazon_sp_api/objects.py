@@ -1,4 +1,3 @@
-import datetime
 from typing import Dict, List, Optional
 
 
@@ -16,6 +15,7 @@ class Order(object):
         self.last_update_date: str = data.get('LastUpdateDate', None)
         self.order_total: Money = Money(data.get('OrderTotal', {}))
         self.shipment_service_level_category: str = data.get('ShipmentServiceLevelCategory', None)
+        self.payment_method_details: List[str] = data.get('PaymentMethodDetails', [])
 
         self.items: List[OrderItem] = []
         self.buyer_info: Optional[BuyerInfo] = None
@@ -58,7 +58,24 @@ class OrderItem(object):
         self.quantity_ordered: int = data.get('QuantityOrdered', None)
         self.quantity_shipped: int = data.get('QuantityShipped', None)
         self.item_price: Money = Money(data.get('ItemPrice', {}))
+        self.item_tax: Money = Money(data.get('ItemTax', {}))
         self.condition_id: str = data.get('ConditionId', None)
+
+        self.shipping_price: Money = Money(data.get('ShippingPrice', {}))
+        if self.shipping_price.amount is None:
+            self.shipping_price = None
+
+        self.shipping_tax: Money = Money(data.get('ShippingTax', {}))
+        if self.shipping_tax.amount is None:
+            self.shipping_tax = None
+
+        self.shipping_discount: Money = Money(data.get('ShippingDiscount', {}))
+        if self.shipping_discount.amount is None:
+            self.shipping_discount = None
+
+        self.shipping_discount_tax: Money = Money(data.get('ShippingDiscountTax', {}))
+        if self.shipping_discount_tax.amount is None:
+            self.shipping_discount_tax = None
 
 
 class BuyerInfo(object):
