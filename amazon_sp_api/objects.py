@@ -16,6 +16,7 @@ class Order(object):
         self.order_total: Money = Money(data.get('OrderTotal', {}))
         self.shipment_service_level_category: str = data.get('ShipmentServiceLevelCategory', None)
         self.payment_method_details: List[str] = data.get('PaymentMethodDetails', [])
+        self.sales_channel: str = data.get('SalesChannel', None)
 
         self.items: List[OrderItem] = []
         self.buyer_info: Optional[BuyerInfo] = None
@@ -31,7 +32,6 @@ class Address(object):
         self.address_one: str = data.get('AddressLine1', None)
         self.address_two: str = data.get('AddressLine2', None)
         self.address_three: str = data.get('AddressLine3', None)
-        self.sales_channel: str = data.get('SalesChannel', None)
         self.city: str = data.get('City', None)
         self.county: str = data.get('County', None)
         self.district: str = data.get('District', None)
