@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import hmac
 import json
+from json import JSONDecodeError
 
 from amazon_sp_api.responses import *
 
@@ -193,7 +194,12 @@ class Client(object):
         if not outcome.ok:
             raise ValueError('Amazon SP-API call failed')
 
-        return request.make_response(outcome.json())
+        try:
+            json_data = outcome.json()
+        except Exception as _:
+            json_data = {'payload': {}}
+
+        return request.make_response(json_data)
 
     def _assume_role(self) -> Dict[str, str]:
         import boto3
@@ -615,7 +621,7 @@ class UpdateOrderStatusRequest(_SpApiRequest):
 
     def do_http_request(self, url, headers, query_string):
         import requests
-        outcome = requests.patch(
+        outcome = requests.post(
             url=url,
             data=self.payload_as_string(),
             headers=headers,
