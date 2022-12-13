@@ -598,3 +598,27 @@ class UpdateListingClickAndCollectInventory(_SpApiRequest):
             params=query_string
         )
         return outcome
+
+
+class UpdateOrderStatusRequest(_SpApiRequest):
+    def __init__(self, client, order_id):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint=f'/orders/v0/orders/{order_id}/shipment',
+            response_type=UpdateOrderStatusResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateDestinationResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.patch(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome

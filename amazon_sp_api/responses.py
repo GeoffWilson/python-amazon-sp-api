@@ -65,3 +65,8 @@ class GetDestinationsResponse(SpApiResponse):
 class CreateDestinationResponse(SpApiResponse):
     def __init__(self, data: Dict[str, any]):
         super().__init__(data)
+
+
+class UpdateOrderStatusResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
