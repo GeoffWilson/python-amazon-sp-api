@@ -5,8 +5,7 @@ from amazon_sp_api.objects import Order, BuyerInfo, OrderItem, Address
 
 class SpApiResponse(object):
     def __init__(self, data: Dict[str, any]):
-        if data.get('payload', None) is None:
-            raise ValueError('Missing payload key')
+        pass
 
 
 class ListOrdersResponse(SpApiResponse):
