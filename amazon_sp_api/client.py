@@ -2,7 +2,6 @@ import datetime
 import hashlib
 import hmac
 import json
-from json import JSONDecodeError
 
 from amazon_sp_api.responses import *
 
@@ -183,7 +182,8 @@ class Client(object):
             digestmod=hashlib.sha256
         ).hexdigest()
 
-        self._headers['Authorization'] = f'{self.AWS_ALGORITH} Credential={self._assumed_access_key_id}/{scope},SignedHeaders={self._get_signed_header_names()},Signature={signature}'
+        self._headers[
+            'Authorization'] = f'{self.AWS_ALGORITH} Credential={self._assumed_access_key_id}/{scope},SignedHeaders={self._get_signed_header_names()},Signature={signature}'
 
         outcome = request.do_http_request(
             url=f'{self._base_url}{request.endpoint}',
