@@ -84,6 +84,12 @@ class Client(object):
         self._assumed_access_key_id: Optional[str] = None
         self._assumed_secret_key_id: Optional[str] = None
         self._amazon_session_token: Optional[str] = None
+        self._restricted_token: Optional[str] = None
+
+    def _suitable_token(self) -> str:
+        if self._restricted_token is not None:
+            return self._restricted_token
+        return self._access_token
 
     def _get_headers(self) -> str:
         header_list = list(self._headers.keys())
@@ -141,6 +147,9 @@ class Client(object):
             digestmod=hashlib.sha256
         ).digest()
 
+    def set_restricted_token(self, restricted_token: str):
+        self._restricted_token = restricted_token
+
     def make_request(self, request: _SpApiRequest) -> SpApiResponse:
         if self._access_token is None or self._access_token_expired():
             self._get_access_token()
@@ -156,7 +165,7 @@ class Client(object):
         self._amazon_session_token = credentials.get('SessionToken')
 
         self._headers = {
-            'x-amz-access-token': self._access_token,
+            'x-amz-access-token': self._suitable_token(),
             'x-amz-date': request_date_time,
             'x-amz-security-token': self._amazon_session_token,
             'user-agent': 'NetXL/2.0',
@@ -292,7 +301,6 @@ class GetOrderRequest(_SpApiRequest):
             headers=headers,
             params=query_string
         )
-        print(outcome.content)
         return outcome
 
 
@@ -316,7 +324,6 @@ class GetOrderBuyerInfoRequest(_SpApiRequest):
             headers=headers,
             params=query_string
         )
-        print(outcome.content)
         return outcome
 
 
@@ -340,7 +347,6 @@ class GetOrderItemsRequest(_SpApiRequest):
             headers=headers,
             params=query_string
         )
-        print(outcome.content)
         return outcome
 
 
@@ -364,7 +370,6 @@ class GetOrderAddressRequest(_SpApiRequest):
             headers=headers,
             params=query_string
         )
-        print(outcome.content)
         return outcome
 
 
@@ -617,6 +622,30 @@ class UpdateOrderStatusRequest(_SpApiRequest):
         self.query_string: Dict[str, str] = {}
 
     def perform(self) -> CreateDestinationResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class GetRestrictedDataToken(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint='/tokens/2021-03-01/restrictedDataToken',
+            response_type=RestrictedDataTokenResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> RestrictedDataTokenResponse:
         return self.client.make_request(self)
 
     def do_http_request(self, url, headers, query_string):

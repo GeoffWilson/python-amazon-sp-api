@@ -19,8 +19,8 @@ class Order(object):
         self.sales_channel: str = data.get('SalesChannel', None)
 
         self.items: List[OrderItem] = []
-        self.buyer_info: Optional[BuyerInfo] = None
-        self.delivery_address: Optional[Address] = None
+        self.buyer_info: Optional[BuyerInfo] = BuyerInfo(data.get('BuyerInfo', {}))
+        self.delivery_address: Optional[Address] = Address(data.get('ShippingAddress', {}))
 
     def is_fba(self):
         return self.fulfillment_channel == 'AFN'

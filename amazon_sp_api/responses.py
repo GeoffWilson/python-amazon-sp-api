@@ -69,3 +69,10 @@ class CreateDestinationResponse(SpApiResponse):
 class UpdateOrderStatusResponse(SpApiResponse):
     def __init__(self, data: Dict[str, any]):
         super().__init__(data)
+
+
+class RestrictedDataTokenResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        self.token = data.get('restrictedDataToken', None)
+
