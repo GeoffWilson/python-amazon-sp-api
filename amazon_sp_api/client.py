@@ -657,3 +657,121 @@ class GetRestrictedDataToken(_SpApiRequest):
             params=query_string
         )
         return outcome
+
+
+class GetEligibleShipmentServices(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint='/mfn/v0/eligibleShippingServices',
+            response_type=GetEligibleShipmentServicesResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetEligibleShipmentServicesResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class CreateShipmentRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint='/mfn/v0/shipments',
+            response_type=CreateShipmentResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateShipmentResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class RequestReportRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint='/reports/2021-06-30/reports',
+            response_type=RequestReportResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> RequestReportResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class GetReportRequest(_SpApiRequest):
+    def __init__(self, client, report_id):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/reports/2021-06-30/reports/{report_id}',
+            response_type=GetReportResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> GetReportResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class GetReportDocumentRequest(_SpApiRequest):
+    def __init__(self, client, document_id):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/reports/2021-06-30/documents/{document_id}',
+            response_type=ReportDocumentResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> ReportDocumentResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            headers=headers,
+            params=query_string
+        )
+        return outcome

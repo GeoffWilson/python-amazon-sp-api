@@ -76,3 +76,37 @@ class RestrictedDataTokenResponse(SpApiResponse):
         super().__init__(data)
         self.token = data.get('restrictedDataToken', None)
 
+
+class GetEligibleShipmentServicesResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        payload = data.get('payload', {})
+        self.shipping_service_list = payload.get('ShippingServiceList', [])
+
+
+class CreateShipmentResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        self.shipment = data.get('payload', {})
+
+
+class RequestReportResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        self.report_id = data.get('reportId', None)
+
+
+class GetReportResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        self.report_id = data.get('reportId', None)
+        self.processing_status = data.get('processingStatus', None)
+        self.document_id = data.get('reportDocumentId', None)
+
+
+class ReportDocumentResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        self.url = data.get('url', None)
+        self.compression_algorithm = data.get('compressionAlgorithm', None)
+
