@@ -775,3 +775,27 @@ class GetReportDocumentRequest(_SpApiRequest):
             params=query_string
         )
         return outcome
+
+
+class GetReportsRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint='/reports/2021-06-30/reports',
+            response_type=RequestReportResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> RequestReportResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome

@@ -87,7 +87,8 @@ class GetEligibleShipmentServicesResponse(SpApiResponse):
 class CreateShipmentResponse(SpApiResponse):
     def __init__(self, data: Dict[str, any]):
         super().__init__(data)
-        self.shipment = data.get('payload', {})
+        for k, v in data.get('payload', {}).items():
+            setattr(self, k, v)
 
 
 class RequestReportResponse(SpApiResponse):
