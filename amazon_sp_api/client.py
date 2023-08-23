@@ -783,19 +783,20 @@ class GetReportsRequest(_SpApiRequest):
             client=client,
             method='GET',
             endpoint='/reports/2021-06-30/reports',
-            response_type=RequestReportResponse
+            response_type=GetReportsResponse
         )
         self.query_string: Dict[str, str] = {}
 
-    def perform(self) -> RequestReportResponse:
+    def perform(self) -> GetReportsResponse:
         return self.client.make_request(self)
 
     def do_http_request(self, url, headers, query_string):
         import requests
-        outcome = requests.post(
+        outcome = requests.get(
             url=url,
             data=self.payload_as_string(),
             headers=headers,
             params=query_string
         )
+        print(outcome.content)
         return outcome

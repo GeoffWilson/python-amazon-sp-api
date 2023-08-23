@@ -111,3 +111,9 @@ class ReportDocumentResponse(SpApiResponse):
         self.url = data.get('url', None)
         self.compression_algorithm = data.get('compressionAlgorithm', None)
 
+
+class GetReportsResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        self.reports = data.get('reports', {})
+
