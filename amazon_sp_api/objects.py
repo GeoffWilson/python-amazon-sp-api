@@ -17,10 +17,15 @@ class Order(object):
         self.shipment_service_level_category: str = data.get('ShipmentServiceLevelCategory', None)
         self.payment_method_details: List[str] = data.get('PaymentMethodDetails', [])
         self.sales_channel: str = data.get('SalesChannel', None)
+        self.must_ship_by: str = data.get('LatestShipDate', None)
+        self.must_deliver_by: str = data.get('LatestDeliveryDate', None)
 
         self.items: List[OrderItem] = []
         self.buyer_info: Optional[BuyerInfo] = BuyerInfo(data.get('BuyerInfo', {}))
         self.delivery_address: Optional[Address] = Address(data.get('ShippingAddress', {}))
+        self.automated_shipping_settings: Optional[AutomatedShippingSettings] = (
+            AutomatedShippingSettings(data.get('AutomatedShippingSettings', {}))
+        )
 
     def is_fba(self):
         return self.fulfillment_channel == 'AFN'
@@ -107,3 +112,10 @@ class SupplySourceAddress(object):
         self.postalCode = data.get('postalCode', None)
         self.countryCode = data.get('countryCode', None)
         self.phone = data.get('phone', None)
+
+
+class AutomatedShippingSettings(object):
+    def __init__(self, data: Dict[str, any]):
+        self.carrier: Optional[str] = data.get('AutomatedCarrier', None)
+        self.has_automation: bool = data.get('HasAutomatedShippingSettings', False)
+        self.method: Optional[str] = data.get('AutomatedShipMethod', None)
