@@ -260,13 +260,8 @@ class Client(object):
 
 
 class ListOrdersRequest(_SpApiRequest):
-    def __init__(self, client, marketplaces: List[str]):
+    def __init__(self, client):
         super().__init__(client=client, method='GET', endpoint='/orders/v0/orders', response_type=ListOrdersResponse)
-        self.query_string: Dict[str, str] = {
-            'MarketplaceIds': ','.join(marketplaces),
-            'CreatedAfter': '2022-11-04T00:00:00Z',
-            'OrderStatuses': 'Unshipped'
-        }
 
     def perform(self) -> ListOrdersResponse:
         return self.client.make_request(self)
