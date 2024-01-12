@@ -57,19 +57,15 @@ class LoginWithAmazonCredentials(object):
 
 
 class Client(object):
-    AWS_REGION = 'eu-west-1'
-    AWS_ALGORITH = 'AWS4-HMAC-SHA256'
 
     def __init__(
             self,
             refresh_token: str,
-            aws_credentials: AmazonWebServicesCredentials,
             lwa_credentials: LoginWithAmazonCredentials,
             grant_type: str = 'refresh_token',
             scope: Optional[str] = None
     ):
         self._refresh_token = refresh_token
-        self._aws_credentials = aws_credentials
         self._lwa_credentials = lwa_credentials
         self._grant_type = grant_type
         self._scope = scope
@@ -81,9 +77,6 @@ class Client(object):
         # These values are set by the client when required
         self._access_token: Optional[str] = None
         self._access_token_expires: Optional[datetime.datetime] = None
-        self._assumed_access_key_id: Optional[str] = None
-        self._assumed_secret_key_id: Optional[str] = None
-        self._amazon_session_token: Optional[str] = None
         self._restricted_token: Optional[str] = None
 
     def _suitable_token(self) -> str:
@@ -91,61 +84,10 @@ class Client(object):
             return self._restricted_token
         return self._access_token
 
-    def _get_headers(self) -> str:
-        header_list = list(self._headers.keys())
-        header_list.sort()
-        header_entries = []
-        for header in header_list:
-            header_entries.append('{header}:{value}\n'.format(
-                header=header,
-                value=self._headers.get(header)
-            ))
-        return ''.join(header_entries)
-
-    def _get_signed_header_names(self) -> str:
-        header_list = list(self._headers.keys())
-        header_list.sort()
-        return ';'.join(header_list)
-
-    def _get_canonical(self, request: _SpApiRequest):
-        return '{http_method}\n{uri}\n{query_string}\n{headers}\n{signed_headers}\n{payload}'.format(
-            http_method=request.method.upper(),
-            uri=request.endpoint,
-            query_string=request.get_query_string(),
-            headers=self._get_headers(),
-            signed_headers=self._get_signed_header_names(),
-            payload=_hash_string(request.payload_as_string()).lower()
-        )
-
     def _access_token_expired(self) -> bool:
         if self._access_token_expires is None:
             return True
         return self._access_token_expires <= datetime.datetime.utcnow()
-
-    def _create_signing_key(self, request_date: str, service: str) -> bytes:
-        key_date = hmac.new(
-            key=f'AWS4{self._assumed_secret_key_id}'.encode('utf-8'),
-            msg=request_date.encode('utf-8'),
-            digestmod=hashlib.sha256
-        ).digest()
-
-        key_region = hmac.new(
-            key=key_date,
-            msg=self.AWS_REGION.encode('utf-8'),
-            digestmod=hashlib.sha256
-        ).digest()
-
-        key_service = hmac.new(
-            key=key_region,
-            msg=service.encode('utf-8'),
-            digestmod=hashlib.sha256
-        ).digest()
-
-        return hmac.new(
-            key=key_service,
-            msg='aws4_request'.encode('utf-8'),
-            digestmod=hashlib.sha256
-        ).digest()
 
     def set_restricted_token(self, restricted_token: str):
         self._restricted_token = restricted_token
@@ -156,43 +98,13 @@ class Client(object):
 
         now: datetime.datetime = datetime.datetime.utcnow()
         request_date_time: str = now.strftime('%Y%m%dT%H%M%SZ')
-        request_date: str = now.strftime('%Y%m%d')
-
-        assumed_role = self._assume_role()
-        credentials: Dict[str, str] = assumed_role.get('Credentials', {})
-        self._assumed_access_key_id = credentials.get('AccessKeyId')
-        self._assumed_secret_key_id = credentials.get('SecretAccessKey')
-        self._amazon_session_token = credentials.get('SessionToken')
 
         self._headers = {
             'x-amz-access-token': self._suitable_token(),
             'x-amz-date': request_date_time,
-            'x-amz-security-token': self._amazon_session_token,
             'user-agent': 'NetXL/2.0',
             'host': 'sellingpartnerapi-eu.amazon.com'
         }
-
-        scope = '{date}/{region}/execute-api/aws4_request'.format(
-            date=request_date,
-            region='eu-west-1',
-        )
-
-        hashed_canonical = _hash_string(self._get_canonical(request))
-        string_to_sign = '{algo}\n{request_date}\n{scope}\n{hashed_canonical}'.format(
-            algo=self.AWS_ALGORITH,
-            request_date=request_date_time,
-            scope=scope,
-            hashed_canonical=hashed_canonical
-        )
-
-        signature = hmac.new(
-            key=self._create_signing_key(request_date, 'execute-api'),
-            msg=string_to_sign.encode('utf-8'),
-            digestmod=hashlib.sha256
-        ).hexdigest()
-
-        self._headers[
-            'Authorization'] = f'{self.AWS_ALGORITH} Credential={self._assumed_access_key_id}/{scope},SignedHeaders={self._get_signed_header_names()},Signature={signature}'
 
         outcome = request.do_http_request(
             url=f'{self._base_url}{request.endpoint}',
@@ -209,23 +121,6 @@ class Client(object):
             json_data = {'payload': {}}
 
         return request.make_response(json_data)
-
-    def _assume_role(self) -> Dict[str, str]:
-        import boto3
-        import uuid
-        client = boto3.client(
-            'sts',
-            aws_access_key_id=self._aws_credentials.access_key_id,
-            aws_secret_access_key=self._aws_credentials.secret_key_id
-        )
-        assumed_role_object = client.assume_role(
-            RoleArn=self._aws_credentials.role_arn,
-            RoleSessionName=str(uuid.uuid4())
-        )
-        return assumed_role_object
-
-    def _sign_request(self, request: _SpApiRequest) -> str:
-        pass
 
     def _get_access_token(self):
         import requests
