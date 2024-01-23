@@ -1,6 +1,5 @@
 import datetime
 import hashlib
-import hmac
 import json
 
 from amazon_sp_api.responses import *
