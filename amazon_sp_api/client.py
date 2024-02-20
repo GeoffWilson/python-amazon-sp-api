@@ -57,6 +57,8 @@ class LoginWithAmazonCredentials(object):
 
 class Client(object):
 
+    UK_MARKETPLACE = 'A1F83G8C2ARO7P'
+
     def __init__(
             self,
             refresh_token: str,
@@ -688,4 +690,28 @@ class GetReportsRequest(_SpApiRequest):
             params=query_string
         )
         print(outcome.content)
+        return outcome
+
+
+class ConfirmShipmentRequest(_SpApiRequest):
+    def __init__(self, client, order_id):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint=f'/orders/v0/orders/{order_id}/shipmentConfirmation',
+            response_type=ConfirmShipmentResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> ConfirmShipmentResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
         return outcome
