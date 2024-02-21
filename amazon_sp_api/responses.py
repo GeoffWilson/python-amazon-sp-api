@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Type
 
-from amazon_sp_api.objects import Order, BuyerInfo, OrderItem, Address
+from amazon_sp_api.objects import Order, BuyerInfo, OrderItem, Address, InboundShipmentPlan
 
 
 class SpApiResponse(object):
@@ -119,6 +119,37 @@ class GetReportsResponse(SpApiResponse):
 
 
 class ConfirmShipmentResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        for k, v in data.get('payload', {}).items():
+            setattr(self, k, v)
+
+
+class CreateInboundShipmentPlanResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        payload = data.get('payload', {})
+        self.plans = [
+            InboundShipmentPlan(plan) for plan in payload.get('InboundShipmentPlans', [])
+        ]
+
+    @property
+    def is_valid(self):
+        return self.plans is not None and len(self.plans) > 0
+
+    @property
+    def is_multiple_fulfilment_centers(self):
+        return self.plans is not None and len(self.plans) > 1
+
+
+class GetListingItemResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)
+        self.sku = data.get('sku')
+        self.summaries = data.get('summaries', [])
+
+
+class CreateInboundShipmentResponse(SpApiResponse):
     def __init__(self, data: Dict[str, any]):
         super().__init__(data)
         for k, v in data.get('payload', {}).items():

@@ -119,3 +119,20 @@ class AutomatedShippingSettings(object):
         self.carrier: Optional[str] = data.get('AutomatedCarrier', None)
         self.has_automation: bool = data.get('HasAutomatedShippingSettings', False)
         self.method: Optional[str] = data.get('AutomatedShipMethod', None)
+
+
+class InboundShipmentItem(object):
+    def __init__(self, data: Dict[str, any]):
+        self.fulfillment_sku: Optional[str] = data.get('FulfillmentNetworkSKU', None)
+        self.quantity: Optional[int] = data.get('Quantity', None)
+        self.sku: Optional[str] = data.get('SellerSKU', None)
+
+
+class InboundShipmentPlan(object):
+    def __init__(self, data: Dict[str, any]):
+        self.destination: Optional[str] = data.get('DestinationFulfillmentCenterId', None)
+        self.label_type: Optional[str] = data.get('LabelPrepType', None)
+        self.shipment_id: Optional[str] = data.get('ShipmentId', None)
+        self.items: List[InboundShipmentItem] = [
+            InboundShipmentItem(item) for item in data.get('Items', [])
+        ]

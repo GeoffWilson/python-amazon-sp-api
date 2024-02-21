@@ -113,6 +113,8 @@ class Client(object):
             query_string=request.query_string
         )
 
+        print(outcome.content)
+
         if not outcome.ok:
             raise ValueError('Amazon SP-API call failed')
 
@@ -704,6 +706,80 @@ class ConfirmShipmentRequest(_SpApiRequest):
         self.query_string: Dict[str, str] = {}
 
     def perform(self) -> ConfirmShipmentResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class CreateInboundShipmentPlanRequest(_SpApiRequest):
+    def __init__(self, client):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint='/fba/inbound/v0/plans',
+            response_type=CreateInboundShipmentPlanResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateInboundShipmentPlanResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class GetListingItemRequest(_SpApiRequest):
+    def __init__(self, client, seller_id, sku):
+        super().__init__(
+            client=client,
+            method='GET',
+            endpoint=f'/listings/2021-08-01/items/{seller_id}/{sku}',
+            response_type=GetListingItemResponse
+        )
+        self.query_string: Dict[str, str] = {
+            'marketplaceIds': 'A1F83G8C2ARO7P'
+        }
+
+    def perform(self) -> GetListingItemResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.get(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class CreateInboundShipmentRequest(_SpApiRequest):
+    def __init__(self, client, shipment_id):
+        super().__init__(
+            client=client,
+            method='POST',
+            endpoint=f'/fba/inbound/v0/shipments/{shipment_id}',
+            response_type=CreateInboundShipmentResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> CreateInboundShipmentResponse:
         return self.client.make_request(self)
 
     def do_http_request(self, url, headers, query_string):
