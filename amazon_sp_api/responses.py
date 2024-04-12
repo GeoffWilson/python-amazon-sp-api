@@ -154,3 +154,8 @@ class CreateInboundShipmentResponse(SpApiResponse):
         super().__init__(data)
         for k, v in data.get('payload', {}).items():
             setattr(self, k, v)
+
+
+class PatchListingResponse(SpApiResponse):
+    def __init__(self, data: Dict[str, any]):
+        super().__init__(data)

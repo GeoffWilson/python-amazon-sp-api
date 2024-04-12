@@ -479,11 +479,11 @@ class CreateSubscriptionRequest(_SpApiRequest):
 
 
 class UpdateListingClickAndCollectInventory(_SpApiRequest):
-    def __init__(self, client, sku):
+    def __init__(self, client, seller_id, sku):
         super().__init__(
             client=client,
             method='PATCH',
-            endpoint=f'/listings/2021-08-01/items/A1T68U0AS07YKL/{sku}',
+            endpoint=f'/listings/2021-08-01/items/{seller_id}/{sku}',
             response_type=CreateDestinationResponse
         )
         self.query_string: Dict[str, str] = {
@@ -785,6 +785,30 @@ class CreateInboundShipmentRequest(_SpApiRequest):
     def do_http_request(self, url, headers, query_string):
         import requests
         outcome = requests.post(
+            url=url,
+            data=self.payload_as_string(),
+            headers=headers,
+            params=query_string
+        )
+        return outcome
+
+
+class PatchListingRequest(_SpApiRequest):
+    def __init__(self, client, seller_id, product_sku):
+        super().__init__(
+            client=client,
+            method='PATCH',
+            endpoint=f'/listings/2021-08-01/items/{seller_id}/{product_sku}',
+            response_type=PatchListingResponse
+        )
+        self.query_string: Dict[str, str] = {}
+
+    def perform(self) -> PatchListingResponse:
+        return self.client.make_request(self)
+
+    def do_http_request(self, url, headers, query_string):
+        import requests
+        outcome = requests.patch(
             url=url,
             data=self.payload_as_string(),
             headers=headers,
