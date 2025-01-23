@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import json
+from typing import Union
 
 from amazon_sp_api.responses import *
 
@@ -15,7 +16,7 @@ class _SpApiRequest(object):
         self.method: str = method
         self.endpoint: str = endpoint
         self.query_string: Dict[str, str] = {}
-        self.payload: Dict[str, str] = {}
+        self.payload: Dict[str, Union[List[str], str]] = {}
         self._response_type: Type[SpApiResponse] = response_type
 
     def get_query_string(self) -> str:
@@ -722,7 +723,7 @@ class CreateInboundShipmentPlanRequest(_SpApiRequest):
         super().__init__(
             client=client,
             method='POST',
-            endpoint='/fba/inbound/v0/plans',
+            endpoint='/inbound/fba/2024-03-20/inboundPlans',
             response_type=CreateInboundShipmentPlanResponse
         )
         self.query_string: Dict[str, str] = {}
