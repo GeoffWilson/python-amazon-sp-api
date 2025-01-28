@@ -114,6 +114,8 @@ class Client(object):
             query_string=request.query_string
         )
 
+        print(outcome.content)
+
         if not outcome.ok:
             raise ValueError('Amazon SP-API call failed')
 
